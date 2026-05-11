@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Revenue Predictor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="page-glow page-glow-left"></div>
+    <div class="page-glow page-glow-right"></div>
+    <main class="layout">
+        <section class="hero">
+            <div class="hero-copy">
+                <p class="eyebrow">Revenue Intelligence Suite</p>
+                <h1>Restaurant revenue predictor</h1>
+                <p class="lead">Machine learning model ko clean dashboard experience ke saath pair kiya gaya hai. Form fill karo, prediction nikalo, aur business inputs ka impact turant dekho.</p>
+                <div class="hero-tags">
+                    <span>Live prediction API</span>
+                    <span>Dataset-backed model</span>
+                    <span>Fast browser workflow</span>
+                </div>
+            </div>
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-label">Dataset rows</span>
+                    <strong id="row-count">{{ total_rows }}</strong>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Target</span>
+                    <strong>Monthly_Revenue</strong>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Supported cuisines</span>
+                    <strong>{{ cuisines|length }}</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="surface">
+            <form id="prediction-form" class="form-shell">
+                <div class="section-heading">
+                    <p class="section-kicker">Input Console</p>
+                    <h2>Business drivers</h2>
+                    <p class="section-copy">Pricing, traffic aur customer behavior values ke base par model expected monthly revenue estimate karta hai.</p>
+                </div>
+
+                <div class="grid">
+                    <label>
+                        <span>Number of customers</span>
+                        <input type="number" name="number_of_customers" value="60" min="0" required>
+                    </label>
+                    <label>
+                        <span>Menu price</span>
+                        <input type="number" name="menu_price" value="35" min="0" step="0.01" required>
+                    </label>
+                    <label>
+                        <span>Marketing spend</span>
+                        <input type="number" name="marketing_spend" value="10" min="0" step="0.01" required>
+                    </label>
+                    <label>
+                        <span>Cuisine type</span>
+                        <select name="cuisine_type" required>
+                            {% for cuisine in cuisines %}
+                            <option value="{{ cuisine }}">{{ cuisine }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Average customer spending</span>
+                        <input type="number" name="average_customer_spending" value="28" min="0" step="0.01" required>
+                    </label>
+                    <label>
+                        <span>Promotions</span>
+                        <select name="promotions" required>
+                            <option value="0">0</option>
+                            <option value="1">1</option>
+                        </select>
+                    </label>
+                    <label class="full-width">
+                        <span>Reviews</span>
+                        <input type="number" name="reviews" value="70" min="0" required>
+                    </label>
+                </div>
+
+                <div class="actions">
+                    <button type="submit">Predict revenue</button>
+                </div>
+            </form>
+
+            <aside class="result-panel">
+                <div class="result-top">
+                    <p class="panel-label">Prediction</p>
+                    <span class="status-chip">Model Active</span>
+                </div>
+                <h2 id="prediction-value">Ready</h2>
+                <p id="prediction-note">Model input submit karte hi yahan answer aayega.</p>
+                <div class="mini-stats">
+                    <div>
+                        <span>Metric</span>
+                        <strong>Monthly revenue</strong>
+                    </div>
+                    <div>
+                        <span>Mode</span>
+                        <strong>Single prediction</strong>
+                    </div>
+                </div>
+                <pre id="prediction-json"></pre>
+            </aside>
+        </section>
+    </main>
+
+    <script>
+        const form = document.getElementById("prediction-form");
+        const predictionValue = document.getElementById("prediction-value");
+        const predictionNote = document.getElementById("prediction-note");
+        const predictionJson = document.getElementById("prediction-json");
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const formData = new FormData(form);
+            const payload = Object.fromEntries(formData.entries());
+
+            predictionValue.textContent = "Calculating...";
+            predictionNote.textContent = "Backend model se response aa raha hai.";
+            predictionJson.textContent = "";
+
+            try {
+                const response = await fetch("/api/predict", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Prediction failed");
+                }
+
+                predictionValue.textContent = `${data.predicted_monthly_revenue.toFixed(2)}`;
+                predictionNote.textContent = "Estimated monthly revenue";
+                predictionJson.textContent = JSON.stringify(data.model_input, null, 2);
+            } catch (error) {
+                predictionValue.textContent = "Error";
+                predictionNote.textContent = error.message;
+            }
+        });
+    </script>
+</body>
+</html>
